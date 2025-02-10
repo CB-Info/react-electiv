@@ -71,4 +71,34 @@ export class GalleryService {
 
     return null;
   }
+
+  async deleteGallery(galleryId: string): Promise<boolean> {
+    const gallery = await this.galleryRepository.findOneById(galleryId);
+    if (!gallery) {
+      return false;
+    }
+
+    const deleteSuccess = await this.galleryRepository.deleteOneBy({
+      _id: galleryId,
+    });
+    if (!deleteSuccess) {
+      return false;
+    }
+
+    const fileName = this.extractFileNameFromUrl(gallery.image);
+    if (fileName) {
+      await this.cloudStorageService.deleteFile(fileName);
+    }
+
+    return true;
+  }
+
+  private extractFileNameFromUrl(url: string): string | null {
+    try {
+      const parts = url.split('/');
+      return parts[parts.length - 1];
+    } catch {
+      return null;
+    }
+  }
 }

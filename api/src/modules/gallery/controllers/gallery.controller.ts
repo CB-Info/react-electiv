@@ -8,6 +8,8 @@ import {
   Post,
   Req,
   UseGuards,
+  Delete,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { GalleryService } from '../services/gallery.service';
@@ -91,6 +93,22 @@ export class GalleryController {
     const isUnlike = await this.galleryService.unlikeGallery(galleryId, userId);
 
     return { error: null, isUnlike: isUnlike };
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Delete('/:id')
+  @ApiOperation({ summary: 'Delete a gallery' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Gallery deleted' })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid credentials',
+  })
+  async deleteGallery(@Param('id') galleryId: string) {
+    const isDeleted = await this.galleryService.deleteGallery(galleryId);
+    if (!isDeleted) {
+      throw new NotFoundException('Gallery not found or already deleted.');
+    }
+    return { error: null, data: `Gallery ${galleryId} deleted.` };
   }
 }
 

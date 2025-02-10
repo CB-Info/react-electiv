@@ -49,4 +49,15 @@ export class CloudStorageService {
       throw error;
     }
   }
+
+  async deleteFile(fileName: string): Promise<void> {
+    const bucket = this.storage.bucket(this.bucketName);
+    const file = bucket.file(fileName);
+
+    try {
+      await file.delete();
+    } catch (err) {
+      console.error('Erreur de suppression dans GCS:', err.message);
+    }
+  }
 }
