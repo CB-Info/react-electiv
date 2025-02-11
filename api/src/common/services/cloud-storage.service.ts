@@ -23,30 +23,35 @@ export class CloudStorageService {
     this.bucketName = 'cloud-pct';
   }
 
-  async uploadBase64Image(base64Data: string): Promise<string> {
+  async generateUploadSignedUrl(
+    fileName: string,
+  ): Promise<{ signedUrl: string; publicUrl: string }> {
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+    const bucket = this.storage.bucket(this.bucketName);
+    const file = bucket.file(fileName);
+
+    const options = {
+      version: 'v4' as const,
+      action: 'write' as const,
+      expires: expiresAt,
+    };
+
+    const [signedUrl] = await file.getSignedUrl(options);
+
+    const publicUrl = file.publicUrl();
+
+    return { signedUrl, publicUrl };
+  }
+
+  async deleteFile(fileName: string): Promise<void> {
+    const bucket = this.storage.bucket(this.bucketName);
+    const file = bucket.file(fileName);
+
     try {
-      const matches = base64Data.match(/^data:(.+);base64,(.+)$/);
-      if (!matches) {
-        throw new Error('Invalid base64 string');
-      }
-      const mimeType = matches[1];
-      const fileData = matches[2];
-
-      const filename = `images/${uuidv4()}`;
-
-      const buffer = Buffer.from(fileData, 'base64');
-
-      const bucket = this.storage.bucket(this.bucketName);
-      const file = bucket.file(filename);
-
-      await file.save(buffer, {
-        metadata: { contentType: mimeType },
-      });
-
-      return file.publicUrl();
-    } catch (error) {
-      this.logger.error(`Erreur lors de l'upload vers GCS: ${error.message}`);
-      throw error;
+      await file.delete();
+    } catch (err) {
+      console.error('Erreur de suppression dans GCS:', err.message);
     }
   }
 }

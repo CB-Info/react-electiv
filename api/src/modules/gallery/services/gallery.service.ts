@@ -20,11 +20,9 @@ export class GalleryService {
     try {
       const { title, image } = parameters;
 
-      const publicUrl = await this.cloudStorageService.uploadBase64Image(image);
-
       const newGallery = (await this.galleryRepository.insert({
         title: title,
-        image: publicUrl,
+        image: image,
       })) as Gallery;
 
       return await this.galleryRepository.findOneById(newGallery._id);
@@ -70,5 +68,39 @@ export class GalleryService {
     }
 
     return null;
+  }
+
+  async deleteGallery(galleryId: string): Promise<boolean> {
+    const gallery = await this.galleryRepository.findOneById(galleryId);
+    if (!gallery) {
+      return false;
+    }
+
+    const deleteSuccess = await this.galleryRepository.deleteOneBy({
+      _id: galleryId,
+    });
+    if (!deleteSuccess) {
+      return false;
+    }
+
+    const fileName = this.extractFileNameFromUrl(gallery.image);
+    if (fileName) {
+      await this.cloudStorageService.deleteFile(fileName);
+    }
+
+    return true;
+  }
+
+  private extractFileNameFromUrl(url: string): string | null {
+    try {
+      const parts = url.split('/');
+      return parts[parts.length - 1];
+    } catch {
+      return null;
+    }
+  }
+
+  async generateSignedUrl(fileName: string) {
+    return this.cloudStorageService.generateUploadSignedUrl(fileName);
   }
 }
