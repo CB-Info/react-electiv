@@ -20,11 +20,9 @@ export class GalleryService {
     try {
       const { title, image } = parameters;
 
-      const publicUrl = await this.cloudStorageService.uploadBase64Image(image);
-
       const newGallery = (await this.galleryRepository.insert({
         title: title,
-        image: publicUrl,
+        image: image,
       })) as Gallery;
 
       return await this.galleryRepository.findOneById(newGallery._id);
@@ -100,5 +98,9 @@ export class GalleryService {
     } catch {
       return null;
     }
+  }
+
+  async generateSignedUrl(fileName: string) {
+    return this.cloudStorageService.generateUploadSignedUrl(fileName);
   }
 }

@@ -23,31 +23,25 @@ export class CloudStorageService {
     this.bucketName = 'cloud-pct';
   }
 
-  async uploadBase64Image(base64Data: string): Promise<string> {
-    try {
-      const matches = base64Data.match(/^data:(.+);base64,(.+)$/);
-      if (!matches) {
-        throw new Error('Invalid base64 string');
-      }
-      const mimeType = matches[1];
-      const fileData = matches[2];
+  async generateUploadSignedUrl(
+    fileName: string,
+  ): Promise<{ signedUrl: string; publicUrl: string }> {
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
 
-      const filename = `images/${uuidv4()}`;
+    const bucket = this.storage.bucket(this.bucketName);
+    const file = bucket.file(fileName);
 
-      const buffer = Buffer.from(fileData, 'base64');
+    const options = {
+      version: 'v4' as const,
+      action: 'write' as const,
+      expires: expiresAt,
+    };
 
-      const bucket = this.storage.bucket(this.bucketName);
-      const file = bucket.file(filename);
+    const [signedUrl] = await file.getSignedUrl(options);
 
-      await file.save(buffer, {
-        metadata: { contentType: mimeType },
-      });
+    const publicUrl = file.publicUrl();
 
-      return file.publicUrl();
-    } catch (error) {
-      this.logger.error(`Erreur lors de l'upload vers GCS: ${error.message}`);
-      throw error;
-    }
+    return { signedUrl, publicUrl };
   }
 
   async deleteFile(fileName: string): Promise<void> {

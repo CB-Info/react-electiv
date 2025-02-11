@@ -1,33 +1,32 @@
 import { useState, useContext } from "react";
-import API from "../api/axios"; 
+import API from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 
 function UploadPage() {
   const [title, setTitle] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
-  // pour accéder à logout si besoin, ou à isAuthenticated
   const { logout } = useContext(AuthContext);
 
   const handleFileChange = (e) => {
-    // Le user a sélectionné un fichier
     const file = e.target.files[0];
     if (!file) return;
 
-    // On va convertir le fichier en base64
+    setSelectedFile(file);
+
     const reader = new FileReader();
-    reader.readAsDataURL(file);
     reader.onload = () => {
-      // reader.result contiendra par ex "data:image/png;base64, iVBORw0KGgoAAAANS..."
-      setSelectedFile(reader.result);
+      setPreviewUrl(reader.result);
     };
     reader.onerror = () => {
       setError("Erreur lors de la lecture du fichier.");
     };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e) => {
@@ -35,35 +34,51 @@ function UploadPage() {
     setError("");
     setSuccess("");
 
-    // Vérifier si on a un token
     const token = localStorage.getItem("JWT");
     if (!token) {
-      // Par exemple, on redirige vers /login
       return navigate("/login");
     }
 
     if (!title || !selectedFile) {
-      return setError("Veuillez renseigner un titre et choisir un fichier à uploader.");
+      return setError(
+        "Veuillez renseigner un titre et choisir un fichier à uploader."
+      );
     }
 
     try {
-      const response = await API.post(
+      const fileName = selectedFile.name;
+      const signedUrlRes = await API.get(
+        `/galleries/signed-url?filename=${encodeURIComponent(fileName)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const { signedUrl, publicUrl } = signedUrlRes.data.data;
+
+      await fetch(signedUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": selectedFile.type,
+        },
+        body: selectedFile,
+      });
+
+      const createResponse = await API.post(
         "/galleries",
         {
           title,
-          image: selectedFile, // base64
+          image: publicUrl,
         },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      if (response.status === 201 || response.status === 200) {
+      if (createResponse.status === 201 || createResponse.status === 200) {
         setSuccess("Image uploadée avec succès !");
         setTitle("");
         setSelectedFile(null);
+        setPreviewUrl(null);
       } else {
         setError("Une erreur est survenue lors de l’upload.");
       }
@@ -72,22 +87,29 @@ function UploadPage() {
         logout();
         navigate("/login");
       } else {
-        setError(err.response?.data?.message || "Une erreur est survenue lors de l’upload.");
+        setError(
+          err.response?.data?.message ||
+            "Une erreur est survenue lors de l’upload."
+        );
       }
     }
   };
 
   return (
     <div className="max-w-md mx-auto bg-white p-8 shadow-lg rounded-lg mt-8">
-      <h2 className="text-2xl font-bold text-center text-blue-500 mb-6">Uploader une image</h2>
+      <h2 className="text-2xl font-bold text-center text-blue-500 mb-6">
+        Uploader une image
+      </h2>
 
       {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
       {success && <p className="text-green-500 text-sm mb-4">{success}</p>}
 
       <form onSubmit={handleSubmit}>
-        {/* Champ Titre */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700" htmlFor="title">
+          <label
+            className="block text-sm font-medium text-gray-700"
+            htmlFor="title"
+          >
             Titre de l’image
           </label>
           <input
@@ -101,9 +123,11 @@ function UploadPage() {
           />
         </div>
 
-        {/* Champ Fichier */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700" htmlFor="fileInput">
+          <label
+            className="block text-sm font-medium text-gray-700"
+            htmlFor="fileInput"
+          >
             Choisir une image
           </label>
           <input
@@ -121,19 +145,19 @@ function UploadPage() {
           />
         </div>
 
-        {/* Preview de l'image (optionnel) */}
-        {selectedFile && (
+        {previewUrl && (
           <div className="mb-4">
             <p className="text-sm text-gray-500 mb-2">Aperçu de l’image :</p>
-            <img
-              src={selectedFile}
-              alt="preview"
-              className="max-h-48 object-cover rounded"
-            />
+            <div className="flex items-center justify-center">
+              <img
+                src={previewUrl}
+                alt="preview"
+                className="max-h-48 object-cover rounded"
+              />
+            </div>
           </div>
         )}
 
-        {/* Bouton Submit */}
         <button
           type="submit"
           className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"

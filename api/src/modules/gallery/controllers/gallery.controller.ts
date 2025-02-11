@@ -10,6 +10,9 @@ import {
   UseGuards,
   Delete,
   NotFoundException,
+  Query,
+  Logger,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { GalleryService } from '../services/gallery.service';
@@ -43,6 +46,30 @@ export class GalleryController {
     const newGallery = await this.galleryService.createGallery(galleryDto);
 
     return { error: null, data: newGallery };
+  }
+
+  @Get('/signed-url')
+  @ApiOperation({
+    summary:
+      'Obtenir une URL signée pour uploader directement un fichier dans GCS',
+  })
+  async getSignedUrl(@Query('filename') filename: string) {
+    if (!filename) {
+      throw new BadRequestException('filename query param is required');
+    }
+
+    const finalName = `images/${Date.now()}-${filename}`;
+
+    const { signedUrl, publicUrl } =
+      await this.galleryService.generateSignedUrl(finalName);
+
+    return {
+      error: null,
+      data: {
+        signedUrl,
+        publicUrl,
+      },
+    };
   }
 
   @HttpCode(HttpStatus.OK)
