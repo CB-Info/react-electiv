@@ -9,7 +9,7 @@ function Gallery() {
   const [isLoading, setIsLoading] = useState(false);
   const [galleries, setGalleries] = useState([]);
   const [error, setError] = useState(null);
-  
+
   const navigate = useNavigate();
 
   const { login, logout } = useContext(AuthContext);
@@ -17,7 +17,7 @@ function Gallery() {
   useEffect(() => {
     const loadGallery = async () => {
       setIsLoading(true);
-      
+
       const token = localStorage.getItem("JWT");
       if (!token) {
         setIsLoading(false);
@@ -48,11 +48,10 @@ function Gallery() {
       try {
         const refreshToken = localStorage.getItem("REFRESH_TOKEN");
         const response = await API.post("/auth/refresh", { refreshToken });
-        
+
         const newToken = response.data.token.accessToken;
 
         login(newToken);
-
       } catch (err) {
         logout();
         navigate("/login");
@@ -69,7 +68,9 @@ function Gallery() {
         {isLoading ? (
           <div>Loading</div>
         ) : galleries && galleries.length > 0 ? (
-          galleries.map((image) => <ImageCard key={image._id} image={image} />)
+          galleries.map((image) => (
+            <ImageCard key={image._id} image={image} mode="gallery" />
+          ))
         ) : (
           <div>No images available</div>
         )}
