@@ -2,7 +2,7 @@ import { useState, useContext, useEffect } from "react";
 import API from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
-import UserGallery from "../components/UserGallery";
+import ImageCard from "../components/ImageCard";
 
 function UploadPage() {
   const [title, setTitle] = useState("");
@@ -119,77 +119,121 @@ function UploadPage() {
     }
   };
 
+  const handleDelete = async (imageId) => {
+    setError("");
+    try {
+      const token = localStorage.getItem("JWT");
+      if (!token) return;
+
+      const response = await API.delete(`/galleries/${imageId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.status === 200) {
+        setUserImages((old) => old.filter((img) => img._id !== imageId));
+      } else {
+        setError("Impossible de supprimer l'image.");
+      }
+    } catch (err) {
+      console.error("Erreur lors de la suppression de l'image:", err);
+      setError("Impossible de supprimer l'image.");
+    }
+  };
+
   return (
-    <div className="max-w-md mx-auto bg-white p-8 shadow-lg rounded-lg mt-8">
-      <h2 className="text-2xl font-bold text-center text-blue-500 mb-6">
-        Uploader une image
-      </h2>
+    <div>
+      <div className="max-w-md mx-auto bg-white p-8 shadow-lg rounded-lg mt-8">
+        <h2 className="text-2xl font-bold text-center text-blue-500 mb-6">
+          Uploader une image
+        </h2>
 
-      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-      {success && <p className="text-green-500 text-sm mb-4">{success}</p>}
+        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+        {success && <p className="text-green-500 text-sm mb-4">{success}</p>}
 
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label
-            className="block text-sm font-medium text-gray-700"
-            htmlFor="title"
-          >
-            Titre de l’image
-          </label>
-          <input
-            id="title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label
+              className="block text-sm font-medium text-gray-700"
+              htmlFor="title"
+            >
+              Titre de l’image
+            </label>
+            <input
+              id="title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border rounded-md shadow-sm
                        focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Ex: Mon super paysage"
-          />
-        </div>
+              placeholder="Ex: Mon super paysage"
+            />
+          </div>
 
-        <div className="mb-4">
-          <label
-            className="block text-sm font-medium text-gray-700"
-            htmlFor="fileInput"
-          >
-            Choisir une image
-          </label>
-          <input
-            id="fileInput"
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="mt-1 block w-full text-sm text-gray-900
+          <div className="mb-4">
+            <label
+              className="block text-sm font-medium text-gray-700"
+              htmlFor="fileInput"
+            >
+              Choisir une image
+            </label>
+            <input
+              id="fileInput"
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="mt-1 block w-full text-sm text-gray-900
                        file:mr-4 file:py-2 file:px-4
                        file:rounded-full file:border-0
                        file:text-sm file:font-semibold
                        file:bg-blue-50 file:text-blue-700
                        hover:file:bg-blue-100
                        cursor-pointer"
-          />
-        </div>
+            />
+          </div>
 
-        {previewUrl && (
-          <div className="mb-4">
-            <p className="text-sm text-gray-500 mb-2">Aperçu de l’image :</p>
-            <div className="flex items-center justify-center">
-              <img
-                src={previewUrl}
-                alt="preview"
-                className="max-h-48 object-cover rounded"
-              />
+          {previewUrl && (
+            <div className="mb-4">
+              <p className="text-sm text-gray-500 mb-2">Aperçu de l’image :</p>
+              <div className="flex items-center justify-center">
+                <img
+                  src={previewUrl}
+                  alt="preview"
+                  className="max-h-48 object-cover rounded"
+                />
+              </div>
             </div>
+          )}
+
+          <button
+            type="submit"
+            className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+          >
+            Uploader
+          </button>
+        </form>
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-xl font-bold text-center text-gray-700">
+          Mes images
+        </h2>
+        {userImages.length === 0 ? (
+          <p className="text-center text-gray-500 mt-4">
+            Aucune image trouvée.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            {userImages.map((img) => (
+              <ImageCard
+                key={img._id}
+                image={img}
+                mode="user"
+                onDelete={handleDelete}
+              />
+            ))}
           </div>
         )}
-
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-        >
-          Uploader
-        </button>
-      </form>
-      <UserGallery userImages={userImages} setUserImages={setUserImages} />
+      </div>
     </div>
   );
 }
