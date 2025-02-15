@@ -107,7 +107,9 @@ function UploadPage() {
         setError("Une erreur est survenue lors de l’upload.");
       }
     } catch (err) {
-      if (err.response?.status === 401) {
+      if (err.response?.status === 400) {
+        setError(err.response?.data?.message);
+      } else if (err.response?.status === 401) {
         logout();
         navigate("/login");
       } else {
