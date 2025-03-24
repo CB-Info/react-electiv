@@ -17,7 +17,7 @@ function App() {
               <Route path="/" element={<Gallery />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/account" element={<UploadPage />} />
+              <Route path="/upload" element={<UploadPage />} />
             </Routes>
           </main>
         </div>
