@@ -15,8 +15,8 @@ function Header() {
           <ul className="flex space-x-4">
             {isAuthenticated ? (
               <li>
-                <Link to="/account" className="text-gray-600 hover:text-blue-500">
-                  Mon compte
+                <Link to="/upload" className="text-gray-600 hover:text-blue-500">
+                  Upload
                 </Link>
               </li>
             ) : (

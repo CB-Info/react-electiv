@@ -42,8 +42,8 @@ export class GalleryService {
       })) as Gallery;
 
       return await this.galleryRepository.findOneById(newGallery._id);
-    } catch {
-      throw new BadRequestException();
+    } catch (err) {
+      throw err;
     }
   }
 
@@ -141,13 +141,24 @@ export class GalleryService {
       safeSearch.racy === 'LIKELY' ||
       safeSearch.racy === 'VERY_LIKELY';
 
-    // 🐱 Vérifie si l'image contient un chat
+    // Vérifie si l'image contient un chat
     const containsCat = labels.some((label: string) =>
       ['cat', 'feline', 'kitten'].includes(label.toLowerCase()),
     );
 
     if (containsCat) {
       console.warn('Image refusée car elle contient un chat !');
+      throw new BadRequestException(
+        'Image refusée car elle contient un chat !',
+      );
+    }
+    if (isUnsafe) {
+      console.warn(
+        'L’image contient du contenu explicite (adult/violent) et a été refusée.',
+      );
+      throw new BadRequestException(
+        'L’image contient du contenu explicite (adult/violent) et a été refusée.',
+      );
     }
 
     return isUnsafe || containsCat;

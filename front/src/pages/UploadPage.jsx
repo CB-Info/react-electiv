@@ -108,13 +108,13 @@ function UploadPage() {
       }
     } catch (err) {
       if (err.response?.status === 400) {
-        setError(err.response?.data?.message);
+        setError(err.response?.data?.error);
       } else if (err.response?.status === 401) {
         logout();
         navigate("/login");
       } else {
         setError(
-          err.response?.data?.message ||
+          err.response?.data?.error ||
             "Une erreur est survenue lors de l’upload."
         );
       }
