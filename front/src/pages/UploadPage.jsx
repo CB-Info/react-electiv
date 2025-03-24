@@ -3,6 +3,7 @@ import API from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 import ImageCard from "../components/ImageCard";
+import { isAccessTokenExpired } from "../api/refreshToken";
 
 function UploadPage() {
   const [title, setTitle] = useState("");
@@ -13,17 +14,26 @@ function UploadPage() {
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
-  const { logout } = useContext(AuthContext);
+  const [isLoading, setIsLoading] = useState(false);
+  const { login, logout } = useContext(AuthContext);
 
   useEffect(() => {
     fetchUserImages();
   }, []);
 
   const fetchUserImages = async () => {
-    try {
-      const token = localStorage.getItem("JWT");
-      if (!token) return;
+    setIsLoading(true);
+    const token = localStorage.getItem("JWT");
+    if (!token) {
+      setIsLoading(false);
+      return navigate("/login");
+    }
 
+    if (isAccessTokenExpired(token)) {
+      await refresh();
+    }
+
+    try {
       const response = await API.get("/galleries/user", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -33,6 +43,21 @@ function UploadPage() {
       }
     } catch (err) {
       console.error("Erreur lors de la récupération des images:", err);
+    }
+    setIsLoading(false);
+  };
+
+  const refresh = async () => {
+    try {
+      const refreshToken = localStorage.getItem("REFRESH_TOKEN");
+      const response = await API.post("/auth/refresh", { refreshToken });
+
+      const newToken = response.data.token.accessToken;
+
+      login(newToken);
+    } catch (err) {
+      logout();
+      navigate("/login");
     }
   };
 
@@ -56,10 +81,16 @@ function UploadPage() {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setIsLoading(true);
 
     const token = localStorage.getItem("JWT");
     if (!token) {
+      setIsLoading(false);
       return navigate("/login");
+    }
+
+    if (isAccessTokenExpired(token)) {
+      await refresh();
     }
 
     if (!title || !selectedFile) {
@@ -118,11 +149,21 @@ function UploadPage() {
             "Une erreur est survenue lors de l’upload."
         );
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDelete = async (imageId) => {
     setError("");
+    setIsLoading(true);
+    const token = localStorage.getItem("JWT");
+    if (!token) return;
+
+    if (isAccessTokenExpired(token)) {
+      await refresh();
+    }
+
     try {
       const token = localStorage.getItem("JWT");
       if (!token) return;
@@ -139,6 +180,8 @@ function UploadPage() {
     } catch (err) {
       console.error("Erreur lors de la suppression de l'image:", err);
       setError("Impossible de supprimer l'image.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -210,7 +253,7 @@ function UploadPage() {
             type="submit"
             className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
           >
-            Uploader
+            {isLoading ? "Chargement..." : "Uploader"}
           </button>
         </form>
       </div>
@@ -219,7 +262,11 @@ function UploadPage() {
         <h2 className="text-xl font-bold text-center text-gray-700">
           Mes images
         </h2>
-        {userImages.length === 0 ? (
+        {isLoading ? (
+          <p className="text-center text-gray-500 mt-4">
+            Chargement des images...
+          </p>
+        ) : userImages.length === 0 ? (
           <p className="text-center text-gray-500 mt-4">
             Aucune image trouvée.
           </p>
