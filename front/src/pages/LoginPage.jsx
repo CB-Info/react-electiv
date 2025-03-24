@@ -20,7 +20,7 @@ function LoginPage() {
       if (response.status === 200) {
         localStorage.setItem("REFRESH_TOKEN", response.data.token.refreshToken);
         login(response.data.token.accessToken);
-        navigate("/");
+        navigate("/gallery");
       }
     } catch (err) {
       setError(err.response?.data?.message || "Something went wrong");
